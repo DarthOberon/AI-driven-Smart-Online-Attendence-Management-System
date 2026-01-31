@@ -3,10 +3,13 @@ import os
 import numpy as np
 import csv
 from datetime import datetime
+import time
+
 
 DATASET_DIR = "dataset"
 MODEL_PATH = "models"
 CASCADE_PATH = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+last_print_time = 0
 
 face_cascade = cv2.CascadeClassifier(CASCADE_PATH)
 
@@ -38,7 +41,7 @@ recognizer.train(faces, labels)
 
 print("Face recognition model trained")
 
-cap = cv2.VideoCapture(0,cv2.CAP_DSHOW)
+cap = cv2.VideoCapture("https://192.168.0.108:8080/video")
 
 print("Press Q or ESC to exit.")
 
@@ -72,7 +75,8 @@ while True:
     # EXTRA safety: ensure single channel
         if len(face_gray.shape) != 2:
             continue
-
+        
+        
         label, confidence = recognizer.predict(face_gray)
 
         name = label_map.get(label, "Unknown")
@@ -94,12 +98,32 @@ while True:
 
         else:
             text = "Unknown"
+        
+        
+        current_time = time.time()
+        if current_time - last_print_time > 1:
+            print(f"[INFO] Detected: {name}, Confidence: {confidence:.2f}")
+            last_print_time = current_time
 
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0, 255, 0), 2)
-        cv2.putText(frame, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+        if confidence < 65:
+            box_color = (0,255,0)
+            text_color = (0,255,0)
+            text =f"{name} ({confidence:.2f})"
+        else:
+            box_color = (0,0,255)
+            text_color = (0,0,255)
+            text = "Unknown"
+
+        cv2.rectangle(frame, (x, y), (x+w, y+h),box_color, 2)
+        cv2.putText(frame, text, (x, y - 10), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8,text_color, 2)
 
 
-    cv2.imshow("Face Recognition - Press Q or ESC",frame)
+    DISPLAY_WIDTH = 960
+    DISPLAY_HEIGHT = 720
+
+    display_frame = cv2.resize(frame,(DISPLAY_WIDTH,DISPLAY_HEIGHT))
+    cv2.imshow("Face Recognition - Press Q or ESC",display_frame)
 
     key = cv2.waitKey(0)
     if key == 27 or key == ord('q'):
